@@ -11,6 +11,7 @@
 #include <string.h>
 
 int make_project(char *path);
+int nspace(char *in, char **out);
 int print_help(void);
 int bad_usage(void);
 
@@ -45,6 +46,7 @@ int make_project(char *path) {
   char *dirn = dirname(p1);
   if(access(dirn, F_OK) != 0) {
     printf("Error: Missing parent directory \"%s\".\n", dirn);
+    free(p1);
     return 2;
   }
   else {
@@ -58,21 +60,42 @@ int make_project(char *path) {
     else {
       mkdir(basen, S_IRWXU);
       chdir(basen);
+      int filename_spaces = 0;
+      if(strchr(basen, ' ') != NULL) {
+        for(int i = 0; i < strlen(basen); i += 1) {
+          if(basen[i] == ' ') filename_spaces += 1;
+        }
+      }
       char *document_filename = malloc(sizeof(char) * (strlen(basen) + 5));
       strcpy(document_filename, basen);
       strcat(document_filename, ".tex");
-      char *pdf_filename = malloc(sizeof(char) * (strlen(basen) + 5));
-      strcpy(pdf_filename, basen);
-      strcat(pdf_filename, ".pdf");
-      char *makefile_buffer = malloc(sizeof(char) * (strlen(document_filename) + strlen(pdf_filename) + 96));
+      char *n_filename = NULL;
+      if(filename_spaces != 0) nspace(document_filename, &n_filename);
+      char *pdf_filename;
+      if(filename_spaces == 0) {
+        pdf_filename = malloc(sizeof(char) * (strlen(document_filename) + 1));
+        strcpy(pdf_filename, document_filename);
+      }
+      else {
+        pdf_filename = malloc(sizeof(char) * (strlen(n_filename) + 1));
+        strcpy(pdf_filename, n_filename);
+      }
+      pdf_filename[strlen(pdf_filename) - 3] = 'p';
+      pdf_filename[strlen(pdf_filename) - 2] = 'd';
+      pdf_filename[strlen(pdf_filename) - 1] = 'f';
+      char *makefile_buffer;
+      if(filename_spaces == 0) makefile_buffer = malloc(sizeof(char) * (strlen(document_filename) + strlen(pdf_filename) + 96));
+      else makefile_buffer = malloc(sizeof(char) * (strlen(n_filename) + strlen(pdf_filename) + 96));
       strcpy(makefile_buffer, "CC = pdflatex\nDOC = ");
-      strcat(makefile_buffer, document_filename);
+      if(filename_spaces == 0) strcat(makefile_buffer, document_filename);
+      else strcat(makefile_buffer, n_filename);
       strcat(makefile_buffer, "\nPDF = ");
       strcat(makefile_buffer, pdf_filename);
       strcat(makefile_buffer, "\n\n$(PDF): $(DOC)\n\t$(CC) $(DOC)\n\nclean:\n\trm *.aux *.log\n.PHONY: clean");
       FILE *makefile = fopen("Makefile", "w");
       fwrite(makefile_buffer, 1, strlen(makefile_buffer), makefile);
       fclose(makefile); 
+      if(n_filename != NULL) free(n_filename);
       free(pdf_filename);
       free(makefile_buffer);
       char *document_buffer = malloc(sizeof(char) * (75));
@@ -83,6 +106,28 @@ int make_project(char *path) {
       free(document_buffer);
       free(document_filename);
     }
+  }
+  return 0;
+}
+
+int nspace(char *in, char **out) {
+  if(in != NULL) {
+    int num_spaces = 0;
+    for(int i = 0; i < strlen(in); i += 1) if(in[i] == ' ') num_spaces += 1;
+    char *mm = malloc(sizeof(char) * (strlen(in) + num_spaces + 1));
+    int j = 0;
+    for(int i = 0; i < strlen(in); i += 1) {
+      if(in[i] == ' ') {
+        mm[j] = '\\';
+        j += 1;
+        mm[j] = ' ';
+      }
+      else mm[j] = in[i];
+      j += 1;
+    }
+    *out = malloc(sizeof(char) * (strlen(mm) + 1));
+    strcpy(*out, mm);
+    free(mm);
   }
   return 0;
 }
