@@ -26,6 +26,16 @@ EXAMPLES
 
        mkdoc "Documents/My Document"
 
+EXIT STATUS
+       0       No errors.
+
+       1       Usage error.
+
+       2       One or more parent directories in [name] does not
+               exist.
+
+       3       A file or directory called [name] already exists.
+
 LICENSE
        GNU General Public License, Version 3.0
 
